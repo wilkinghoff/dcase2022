@@ -140,20 +140,20 @@ def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
     #x = tf.keras.layers.Reshape((int(raw_dim/2),2))(x)
     x = tf.keras.layers.Lambda(lambda x: tf.math.abs(tf.signal.fft(tf.complex(x[:,:,0], tf.zeros_like(x[:,:,0])))[:,:int(raw_dim/2)]))(x_mix)
     x = tf.keras.layers.Reshape((-1,1))(x)
-    x = tf.keras.layers.BatchNormalization(-2)(x)
+    #x = tf.keras.layers.BatchNormalization(-2)(x)
     x = tf.keras.layers.Conv1D(128, 256, strides=64, activation='linear', padding='same',
                                kernel_regularizer=l2_weight_decay, use_bias=False)(x)
     x = tf.keras.layers.LeakyReLU(alpha=0.1)(x)
-    x = tf.keras.layers.BatchNormalization()(x)
+    #x = tf.keras.layers.BatchNormalization()(x)
     #x = tf.keras.layers.MaxPooling1D(256, strides=64)(x)
     x = tf.keras.layers.Conv1D(128, 64, strides=32, activation='linear', padding='same',
                                kernel_regularizer=l2_weight_decay, use_bias=False)(x)
     x = tf.keras.layers.LeakyReLU(alpha=0.1)(x)
-    x = tf.keras.layers.BatchNormalization()(x)
+    #x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.Conv1D(128, 16, strides=4, activation='linear', padding='same',
                                kernel_regularizer=l2_weight_decay, use_bias=False)(x)
     x = tf.keras.layers.LeakyReLU(alpha=0.1)(x)
-    x = tf.keras.layers.BatchNormalization()(x)
+    #x = tf.keras.layers.BatchNormalization()(x)
 
     x = tf.keras.layers.Flatten()(x)
 
@@ -177,13 +177,13 @@ def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
     x = tf.keras.layers.Reshape((160000,))(x_mix)
     x = LogMelSpectrogram(16000, 1024, 256, 128, f_max=8000)(x)
     #x = tf.keras.layers.Lambda(lambda x: x-tf.math.reduce_mean(tf.math.reduce_mean(x, axis=1, keepdims=True), axis=0, keepdims=True))(x)
-    #x = tf.keras.layers.BatchNormalization(axis=-2)(x)
+    x = tf.keras.layers.BatchNormalization(axis=-2)(x)
     x = tf.keras.layers.Lambda(lambda x: x - tf.math.reduce_mean(x, axis=1, keepdims=True))(x)
     # first block
     x = tf.keras.layers.Conv2D(16, 7, strides=2, activation='linear', padding='same',
                                kernel_regularizer=l2_weight_decay, use_bias=False)(x)
     x = tf.keras.layers.LeakyReLU(alpha=0.1)(x)
-    x = tf.keras.layers.BatchNormalization(-2)(x)
+    #x = tf.keras.layers.BatchNormalization(-2)(x)
     x = tf.keras.layers.MaxPooling2D(3, strides=2)(x)
     # x, y = MixupLayer(prob=1)([x, y])
 
@@ -192,10 +192,10 @@ def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
     xr = tf.keras.layers.Conv2D(16, 3, activation='linear', padding='same', kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     # xr, y = MixupLayer(prob=1)([xr, y])
     xr = tf.keras.layers.LeakyReLU(alpha=0.1)(xr)
-    xr = tf.keras.layers.BatchNormalization()(xr)
+    #xr = tf.keras.layers.BatchNormalization()(xr)
     xr = tf.keras.layers.Conv2D(16, 3, activation='linear', padding='same', kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     x = tf.keras.layers.Add()([x, xr])
-    x = tf.keras.layers.BatchNormalization()(x)
+    #x = tf.keras.layers.BatchNormalization()(x)
     # x = tf.keras.layers.Dropout(rate=0.2)(x)
     # x, y = MixupLayer(prob=1)([x, y])
 
@@ -203,10 +203,10 @@ def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
     xr = tf.keras.layers.Conv2D(16, 3, activation='linear', padding='same', kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     # xr, y = MixupLayer(prob=1)([xr, y])
     xr = tf.keras.layers.LeakyReLU(alpha=0.1)(xr)
-    xr = tf.keras.layers.BatchNormalization()(xr)
+    #xr = tf.keras.layers.BatchNormalization()(xr)
     xr = tf.keras.layers.Conv2D(16, 3, activation='linear', padding='same', kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     x = tf.keras.layers.Add()([x, xr])
-    x = tf.keras.layers.BatchNormalization()(x)
+    #x = tf.keras.layers.BatchNormalization()(x)
     # x = tf.keras.layers.Dropout(rate=0.2)(x)
     # x, y = MixupLayer(prob=1)([x, y])
     """
@@ -227,13 +227,13 @@ def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
                                 kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     # xr, y = MixupLayer(prob=1)([xr, y])
     xr = tf.keras.layers.LeakyReLU(alpha=0.1)(xr)
-    xr = tf.keras.layers.BatchNormalization()(xr)
+    #xr = tf.keras.layers.BatchNormalization()(xr)
     xr = tf.keras.layers.Conv2D(32, 3, activation='linear', padding='same', kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     x = tf.keras.layers.MaxPooling2D((2, 2), padding='same')(x)
     x = tf.keras.layers.Conv2D(kernel_size=1, filters=32, strides=1, padding="same",
                                kernel_regularizer=l2_weight_decay, use_bias=False)(x)
     x = tf.keras.layers.Add()([x, xr])
-    x = tf.keras.layers.BatchNormalization()(x)
+    #x = tf.keras.layers.BatchNormalization()(x)
     # x = tf.keras.layers.Dropout(rate=0.2)(x)
     # x, y = MixupLayer(prob=1)([x, y])
 
@@ -241,10 +241,10 @@ def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
     xr = tf.keras.layers.Conv2D(32, 3, activation='linear', padding='same', kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     # xr, y = MixupLayer(prob=1)([xr, y])
     xr = tf.keras.layers.LeakyReLU(alpha=0.1)(xr)
-    xr = tf.keras.layers.BatchNormalization()(xr)
+    #xr = tf.keras.layers.BatchNormalization()(xr)
     xr = tf.keras.layers.Conv2D(32, 3, activation='linear', padding='same', kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     x = tf.keras.layers.Add()([x, xr])
-    x = tf.keras.layers.BatchNormalization()(x)
+    #x = tf.keras.layers.BatchNormalization()(x)
     # x = tf.keras.layers.Dropout(rate=0.2)(x)
     # x, y = MixupLayer(prob=1)([x, y])
     """
@@ -276,13 +276,13 @@ def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
                                 kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     # xr, y = MixupLayer(prob=1)([xr, y])
     xr = tf.keras.layers.LeakyReLU(alpha=0.1)(xr)
-    xr = tf.keras.layers.BatchNormalization()(xr)
+    #xr = tf.keras.layers.BatchNormalization()(xr)
     xr = tf.keras.layers.Conv2D(64, 3, activation='linear', padding='same', kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     x = tf.keras.layers.MaxPooling2D((2, 2), padding='same')(x)
     x = tf.keras.layers.Conv2D(kernel_size=1, filters=64, strides=1, padding="same",
                                kernel_regularizer=l2_weight_decay, use_bias=False)(x)
     x = tf.keras.layers.Add()([x, xr])
-    x = tf.keras.layers.BatchNormalization()(x)
+    #x = tf.keras.layers.BatchNormalization()(x)
     # x = tf.keras.layers.Dropout(rate=0.2)(x)
     # x, y = MixupLayer(prob=1)([x, y])
 
@@ -290,10 +290,10 @@ def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
     xr = tf.keras.layers.Conv2D(64, 3, activation='linear', padding='same', kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     # xr, y = MixupLayer(prob=1)([xr, y])
     xr = tf.keras.layers.LeakyReLU(alpha=0.1)(xr)
-    xr = tf.keras.layers.BatchNormalization()(xr)
+    #xr = tf.keras.layers.BatchNormalization()(xr)
     xr = tf.keras.layers.Conv2D(64, 3, activation='linear', padding='same', kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     x = tf.keras.layers.Add()([x, xr])
-    x = tf.keras.layers.BatchNormalization()(x)
+    #x = tf.keras.layers.BatchNormalization()(x)
     # x = tf.keras.layers.Dropout(rate=0.2)(x)
     # x, y = MixupLayer(prob=1)([x, y])
     """
@@ -347,13 +347,13 @@ def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
                                 kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     # xr, y = MixupLayer(prob=1)([xr, y])
     xr = tf.keras.layers.LeakyReLU(alpha=0.1)(xr)
-    xr = tf.keras.layers.BatchNormalization()(xr)
+    #xr = tf.keras.layers.BatchNormalization()(xr)
     xr = tf.keras.layers.Conv2D(128, 3, activation='linear', padding='same', kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     x = tf.keras.layers.MaxPooling2D((2, 2), padding='same')(x)
     x = tf.keras.layers.Conv2D(kernel_size=1, filters=128, strides=1, padding="same",
                                kernel_regularizer=l2_weight_decay, use_bias=False)(x)
     x = tf.keras.layers.Add()([x, xr])
-    x = tf.keras.layers.BatchNormalization()(x)
+    #x = tf.keras.layers.BatchNormalization()(x)
     # x = tf.keras.layers.Dropout(rate=0.2)(x)
     # x, y = MixupLayer(prob=1)([x, y])
 
@@ -361,10 +361,10 @@ def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
     xr = tf.keras.layers.Conv2D(128, 3, activation='linear', padding='same', kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     # xr, y = MixupLayer(prob=1)([xr, y])
     xr = tf.keras.layers.LeakyReLU(alpha=0.1)(xr)
-    xr = tf.keras.layers.BatchNormalization()(xr)
+    #xr = tf.keras.layers.BatchNormalization()(xr)
     xr = tf.keras.layers.Conv2D(128, 3, activation='linear', padding='same', kernel_regularizer=l2_weight_decay, use_bias=False)(xr)
     x = tf.keras.layers.Add()([x, xr])
-    x = tf.keras.layers.BatchNormalization()(x)
+    #x = tf.keras.layers.BatchNormalization()(x)
     # x = tf.keras.layers.Dropout(rate=0.2)(x)
     # x, y = MixupLayer(prob=1)([x, y])
     """
@@ -675,7 +675,7 @@ for n_subclusters in [16]:#2**np.arange(6):
         print('subclusters: ' + str(n_subclusters))
         print('aeon: ' + str(k))
         # fit model
-        weight_path = 'wts_raw_' + str(k + 1) + 'k_' + str(target_sr) + '_' + str(n_subclusters) + '_with_eval_no-bias_fixed-means.h5' # '_emb_distr_raw.h5'
+        weight_path = 'wts_raw_' + str(k + 1) + 'k_' + str(target_sr) + '_' + str(n_subclusters) + '_with_eval_no-bias_fixed-means_no-batch-norm.h5' # '_emb_distr_raw.h5'
         if not os.path.isfile(weight_path):
             class_weights = class_weight.compute_class_weight('balanced', np.unique(train_labels), train_labels)
             #class_weights = np.sum(y_train_cat,axis=0)/np.sum(y_train_cat)
