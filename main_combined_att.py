@@ -412,6 +412,7 @@ def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
 
     x = tf.keras.layers.MaxPooling2D((10, 1), padding='same')(x)
     x = tf.keras.layers.Flatten(name='flat')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
 
     # x = tf.keras.layers.Reshape((80, 128))(x)
     # x = tf.keras.layers.Permute((2,1))(x)
@@ -661,7 +662,6 @@ for n_subclusters in [16]:  # 2**np.arange(6):
     y_unknown_cat = keras.utils.np_utils.to_categorical(unknown_labels, num_classes=num_classes)
     # y_test_cat = keras.utils.np_utils.to_categorical(test_labels, num_classes=num_classes)
 
-
     y_train_cat_4train = keras.utils.np_utils.to_categorical(train_labels_4train, num_classes=num_classes_4train)
     y_eval_cat_4train = keras.utils.np_utils.to_categorical(eval_labels_4train, num_classes=num_classes_4train)
     y_unknown_cat_4train = keras.utils.np_utils.to_categorical(unknown_labels_4train, num_classes=num_classes_4train)
@@ -701,23 +701,24 @@ for n_subclusters in [16]:  # 2**np.arange(6):
         weight_path = 'wts_raw_' + str(k + 1) + 'k_' + str(target_sr) + '_' + str(
             n_subclusters) + '_with_eval_no-bias_fixed-means_no-batch-norm_att.h5'  # '_emb_distr_raw.h5'
         if not os.path.isfile(weight_path):
-            class_weights = class_weight.compute_class_weight('balanced', np.unique(train_labels_4train), train_labels_4train)
+            class_weights = class_weight.compute_class_weight('balanced', np.unique(train_labels_4train),
+                                                              train_labels_4train)
             # class_weights = np.sum(y_train_cat,axis=0)/np.sum(y_train_cat)
             class_weights = {i: class_weights[i] for i in range(class_weights.shape[0])}
-            for k_epoch in [1]:  # np.arange(epochs):
-                # train_raw = np.load(str(target_sr) + '_train_raw.npy')
-                # train_raw_mixed = train_raw  # np.zeros(train_raw.shape)
-                # for lab in tqdm(np.unique(train_labels)):
-                #    rand_target_idcs = np.random.randint(0,np.sum(~source_train*(train_labels==lab)),np.sum(source_train*(train_labels==lab)))
-                #    rand_mix_coeffs = 0.5#np.random.rand(len(rand_target_idcs),1,1)
-                #    train_raw[source_train*(train_labels==lab)] *= rand_mix_coeffs
-                #    train_raw[source_train * (train_labels == lab)] +=(1-rand_mix_coeffs)*train_raw[~source_train*(train_labels==lab)][rand_target_idcs]
+            for k_epoch in [1]:#np.arange(epochs):
+                #train_raw = np.load(str(target_sr) + '_train_raw.npy')
+                #train_raw_mixed = train_raw  # np.zeros(train_raw.shape)
+                #for lab in tqdm(np.unique(train_labels)):
+                #   rand_target_idcs = np.random.randint(0,np.sum(~source_train*(train_labels==lab)),np.sum(source_train*(train_labels==lab)))
+                #   rand_mix_coeffs = 0.5#np.random.rand(len(rand_target_idcs),1,1)
+                #   train_raw[source_train*(train_labels==lab)] *= rand_mix_coeffs
+                #   train_raw[source_train * (train_labels == lab)] +=(1-rand_mix_coeffs)*train_raw[~source_train*(train_labels==lab)][rand_target_idcs]
                 model.fit(
                     # [train_raw[source_train], y_train_cat[source_train]], y_train_cat[source_train], verbose=1,
                     [train_raw, y_train_cat_4train], y_train_cat_4train, verbose=1,
                     batch_size=batch_size, epochs=epochs, callbacks=callbacks,
                     validation_data=([eval_raw, y_eval_cat_4train], y_eval_cat_4train))  # , class_weight=class_weights)
-                # train_raw = None
+                #train_raw = None
             model.save(weight_path)
         else:
             model = tf.keras.models.load_model(weight_path,
@@ -797,7 +798,7 @@ for n_subclusters in [16]:  # 2**np.arange(6):
                     # take mean of scores
                     pred_unknown_tmp[j_sample] = np.mean(scores_unknown_mixed)
                 tmp_mixed = None
-    
+
                 # plt.plot(pred_train[train_labels_4train == lab, j],'.')
                 plt.plot(pred_eval_tmp,'.')
                 plt.plot(pred_unknown_tmp,'.')
@@ -826,15 +827,36 @@ for n_subclusters in [16]:  # 2**np.arange(6):
                 # plt.show()
                 # clf1 = GaussianMixture(n_components=n_subclusters_gmm, covariance_type='full', reg_covar=1e-3, means_init=model_means_ln[j * n_subclusters:(j + 1) * n_subclusters]).fit(x_train_ln[train_labels==lab])#.fit(x_train_ln[train_labels==lab][source_train[train_labels==lab]])
                 if np.sum(train_labels == lab) > 1:
+                    #if np.sum(train_labels == lab) >= n_subclusters_gmm:
+                    #    clf1 = GaussianMixture(n_components=n_subclusters_gmm, covariance_type='full',
+                    #                           reg_covar=1e-3).fit(
+                    #        x_train_ln[train_labels == lab])
+                    #else:
+                    #    clf1 = GaussianMixture(n_components=np.sum(train_labels == lab), covariance_type='full',
+                    #                           reg_covar=1e-3).fit(x_train_ln[train_labels == lab])
+                    #pred_train[train_labels == lab, :] += np.expand_dims(
+                    #    -clf1.score_samples(x_train_ln[train_labels == lab]), axis=-1)
+
+                    x_train_ln_cp = np.copy(x_train_ln[source_train * (train_labels == lab)])
+                    rand_target_idcs = np.random.randint(0, np.sum(~source_train * (train_labels == lab)),
+                                                         np.sum(source_train * (train_labels == lab)))
+                    rand_mix_coeffs = 0.5  # np.random.rand(len(rand_target_idcs),1,1)
+                    x_train_ln_cp *= rand_mix_coeffs
+                    x_train_ln_cp += (1 - rand_mix_coeffs) * x_train_ln[~source_train * (train_labels == lab)][
+                        rand_target_idcs]
                     if np.sum(train_labels == lab) >= n_subclusters_gmm:
                         clf1 = GaussianMixture(n_components=n_subclusters_gmm, covariance_type='full',
                                                reg_covar=1e-3).fit(
-                            x_train_ln[train_labels == lab])
+                            np.concatenate([x_train_ln_cp, x_train_ln[train_labels == lab]], axis=0))
                     else:
                         clf1 = GaussianMixture(n_components=np.sum(train_labels == lab), covariance_type='full',
-                                               reg_covar=1e-3).fit(x_train_ln[train_labels == lab])
-                    pred_train[train_labels == lab, :] += np.expand_dims(
-                        -clf1.score_samples(x_train_ln[train_labels == lab]), axis=-1)
+                                               reg_covar=1e-3).fit(
+                            np.concatenate([x_train_ln_cp, x_train_ln[train_labels == lab]], axis=0))
+                    # pred_train[train_labels == lab, :] += np.expand_dims(
+                    #    -clf1.score_samples(x_train_ln_cp), axis=-1)
+                    # pred_train[train_labels == lab, :] += np.expand_dims(
+                    #    -clf1.score_samples(x_train_ln_cp), axis=-1)
+
                     if np.sum(eval_labels == lab) > 0:
                         pred_eval[eval_labels == lab, :] += np.expand_dims(
                             -clf1.score_samples(x_eval_ln[eval_labels == lab]), axis=-1)
@@ -852,8 +874,8 @@ for n_subclusters in [16]:  # 2**np.arange(6):
                     if np.sum(eval_labels == lab) > 0:
                         auc = roc_auc_score(np.concatenate(
                             [np.zeros(np.sum(eval_labels == lab)), np.ones(np.sum(unknown_labels == lab))], axis=0),
-                                            np.concatenate([pred_eval[eval_labels == lab, j],
-                                                            pred_unknown[unknown_labels == lab, j]], axis=0))
+                            np.concatenate([pred_eval[eval_labels == lab, j],
+                                            pred_unknown[unknown_labels == lab, j]], axis=0))
 
                         # plt.plot(pred_train[train_labels_4train == lab, j],'.')
                         # plt.plot(pred_eval[eval_labels_4train == lab, j],'.')
@@ -861,7 +883,7 @@ for n_subclusters in [16]:  # 2**np.arange(6):
                         # plt.show()
                         print('AUC with mean: ' + str(auc))
         for n_subclusters_gmm in [15]:
-
+            """
             n_subclusters_gmm = n_subclusters
             for j, lab in tqdm(enumerate(np.unique(train_labels_4train)), total=len(np.unique(train_labels_4train))):
 
@@ -898,10 +920,10 @@ for n_subclusters in [16]:  # 2**np.arange(6):
                         # plt.plot(pred_unknown[unknown_labels_4train == lab, j],'.')
                         # plt.show()
                         print('AUC with mean: ' + str(auc))
-
+            """
             j = 0
-            pred_eval_plda = pred_eval#np.log(1-np.exp(pred_eval))
-            pred_unknown_plda = pred_unknown#np.log(1-np.exp(pred_unknown))
+            pred_eval_plda = pred_eval  # np.log(1-np.exp(pred_eval))
+            pred_unknown_plda = pred_unknown  # np.log(1-np.exp(pred_unknown))
             # plt.plot(pred_eval_plda,'.')
             # plt.plot(pred_unknown_plda, '.')
             # plt.show()
@@ -934,7 +956,7 @@ for n_subclusters in [16]:  # 2**np.arange(6):
             print('all files: ' + str(np.mean(
                 np.hstack([type_pred_unknown1, type_pred_eval1]) == np.hstack([type_labels_unknown1, type_labels_eval1]))))
             print('####################')
-    
+
             print('closed-set performance on test data')
             y_pred_test = np.argmin(pred_test_plda, axis=1)
             type_labels_test1 = np.array([test_id.split('_')[0] for test_id in test_ids])

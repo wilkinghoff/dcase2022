@@ -156,7 +156,7 @@ def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
     #x = tf.keras.layers.BatchNormalization()(x)
 
     x = tf.keras.layers.Flatten()(x)
-
+    x = tf.keras.layers.BatchNormalization()(x)
     #x = tf.keras.layers.Reshape((raw_dim,))(x)
     x = tf.keras.layers.Dense(128, kernel_regularizer=l2_weight_decay, use_bias=False)(x)
     x = tf.keras.layers.BatchNormalization()(x)
@@ -396,6 +396,7 @@ def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
 
     x = tf.keras.layers.MaxPooling2D((10, 1), padding='same')(x)
     x = tf.keras.layers.Flatten(name='flat')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
 
     # x = tf.keras.layers.Reshape((80, 128))(x)
     # x = tf.keras.layers.Permute((2,1))(x)
@@ -799,6 +800,7 @@ for n_subclusters in [16]:#2**np.arange(6):
                 #plt.show()
                 #clf1 = GaussianMixture(n_components=n_subclusters_gmm, covariance_type='full', reg_covar=1e-3, means_init=model_means_ln[j * n_subclusters:(j + 1) * n_subclusters]).fit(x_train_ln[train_labels==lab])#.fit(x_train_ln[train_labels==lab][source_train[train_labels==lab]])
                 if np.sum(train_labels == lab) > 1:
+                    """
                     if np.sum(train_labels == lab) >= n_subclusters_gmm:
                         clf1 = GaussianMixture(n_components=n_subclusters_gmm, covariance_type='full', reg_covar=1e-3).fit(
                             x_train_ln[train_labels == lab])
@@ -809,7 +811,34 @@ for n_subclusters in [16]:#2**np.arange(6):
                     if np.sum(eval_labels==lab)>0:
                         pred_eval[eval_labels==lab, :] += np.expand_dims(-clf1.score_samples(x_eval_ln[eval_labels==lab]), axis=-1)
                         pred_unknown[unknown_labels==lab, :] += np.expand_dims(-clf1.score_samples(x_unknown_ln[unknown_labels==lab]), axis=-1)
+                    """
 
+
+                    x_train_ln_cp = np.copy(x_train_ln[source_train * (train_labels == lab)])
+                    rand_target_idcs = np.random.randint(0, np.sum(~source_train * (train_labels == lab)),
+                                                         np.sum(source_train * (train_labels == lab)))
+                    rand_mix_coeffs = 0.5  # np.random.rand(len(rand_target_idcs),1,1)
+                    x_train_ln_cp *= rand_mix_coeffs
+                    x_train_ln_cp += (1 - rand_mix_coeffs) * x_train_ln[~source_train * (train_labels == lab)][
+                        rand_target_idcs]
+                    if np.sum(train_labels == lab) >= n_subclusters_gmm:
+                        clf1 = GaussianMixture(n_components=n_subclusters_gmm, covariance_type='full',
+                                               reg_covar=1e-3).fit(
+                            np.concatenate([x_train_ln_cp, x_train_ln[train_labels == lab]], axis=0))
+                    else:
+                        clf1 = GaussianMixture(n_components=np.sum(train_labels == lab), covariance_type='full',
+                                               reg_covar=1e-3).fit(
+                            np.concatenate([x_train_ln_cp, x_train_ln[train_labels == lab]], axis=0))
+                    # pred_train[train_labels == lab, :] += np.expand_dims(
+                    #    -clf1.score_samples(x_train_ln_cp), axis=-1)
+                    # pred_train[train_labels == lab, :] += np.expand_dims(
+                    #    -clf1.score_samples(x_train_ln_cp), axis=-1)
+
+                    if np.sum(eval_labels == lab) > 0:
+                        pred_eval[eval_labels == lab, :] += np.expand_dims(
+                            -clf1.score_samples(x_eval_ln[eval_labels == lab]), axis=-1)
+                        pred_unknown[unknown_labels == lab, :] += np.expand_dims(
+                            -clf1.score_samples(x_unknown_ln[unknown_labels == lab]), axis=-1)
                     #pred_train += np.expand_dims(-clf1.score_samples(x_train_ln), axis=-1)
                     #if np.sum(eval_labels == lab) > 0:
                     #    pred_eval += np.expand_dims(-clf1.score_samples(x_eval_ln), axis=-1)
@@ -829,6 +858,7 @@ for n_subclusters in [16]:#2**np.arange(6):
                         print('AUC with mean: ' + str(auc))
 
         for n_subclusters_gmm in [15]:
+            """
             n_subclusters_gmm = n_subclusters
             for j, lab in tqdm(enumerate(np.unique(train_labels_4train)), total=len(np.unique(train_labels_4train))):
 
@@ -860,6 +890,7 @@ for n_subclusters in [16]:#2**np.arange(6):
                         #plt.plot(pred_unknown[unknown_labels_4train == lab, j],'.')
                         #plt.show()
                         print('AUC with mean: ' + str(auc))
+            """
             j=0
             pred_eval_plda = pred_eval
             pred_unknown_plda = pred_unknown
