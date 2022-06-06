@@ -395,7 +395,7 @@ def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
     # std = tf.keras.layers.Lambda(lambda x: K.std(x, axis=1))(x)  # this causes numerical issues!!!!
     # stack = tf.keras.layers.concatenate([mean, std])
 
-    x = tf.keras.layers.MaxPooling2D((10, 1), padding='same')(x)
+    x = tf.keras.layers.MaxPooling2D((20, 1), padding='same')(x)
     x = tf.keras.layers.Flatten(name='flat')(x)
     x = tf.keras.layers.BatchNormalization()(x)
 
@@ -513,7 +513,6 @@ else:
     np.save('eval_domains.npy', eval_domains)
     np.save(str(target_sr) + '_eval_raw.npy', eval_raw)
 
-"""
 # load test data
 print('Loading test data')
 if os.path.isfile(str(target_sr) + '_test_raw.npy'):
@@ -527,12 +526,13 @@ else:
     eps = 1e-12
     for label, category in enumerate(categories):
         print(category)
-        for count, file in tqdm(enumerate(os.listdir("./eval_data/" + category + "/test")), total=len(os.listdir("./eval_data/" + category + "/test"))):
+        for count, file in tqdm(enumerate(os.listdir("./eval_data/" + category + "/test")),
+                                total=len(os.listdir("./eval_data/" + category + "/test"))):
             file_path = "./eval_data/" + category + "/test/" + file
             wav, fs = sf.read(file_path)
-            raw = librosa.core.to_mono(wav.transpose()).transpose()[:10*target_sr]
+            raw = librosa.core.to_mono(wav.transpose()).transpose()[:10 * target_sr]
             test_raw.append(raw)
-            test_ids.append(category + '_' + file.split('_')[-2])
+            test_ids.append(category + '_' + file.split('_')[1])
             test_files.append(file_path)
     # reshape arrays and store
     test_ids = np.array(test_ids)
@@ -541,7 +541,7 @@ else:
     np.save('test_ids.npy', test_ids)
     np.save('test_files.npy', test_files)
     np.save(str(target_sr) + '_test_raw.npy', test_raw)
-"""
+
 # encode ids as labels
 le_4train = LabelEncoder()
 # le.fit(np.concatenate([np.unique(train_ids), np.unique(eval_ids), np.unique(test_ids)]))
@@ -552,11 +552,11 @@ le_4train.fit(np.concatenate([train_ids_4train, eval_ids_4train], axis=0))
 num_classes_4train = len(np.unique(np.concatenate([train_ids_4train, eval_ids_4train], axis=0)))
 train_labels_4train = le_4train.transform(train_ids_4train)
 eval_labels_4train = le_4train.transform(eval_ids_4train)
-# test_labels = le.transform(test_ids)
 
 le = LabelEncoder()
 train_labels = le.fit_transform(train_ids)
 eval_labels = le.transform(eval_ids)
+test_labels = le.transform(test_ids)
 num_classes = len(np.unique(train_labels))
 
 # distinguish between normal and anomalous samples
@@ -634,18 +634,18 @@ alpha = 1
 # predicting with GMMs
 pred_eval = np.zeros((eval_raw.shape[0], np.unique(train_labels_4train).shape[0]))
 pred_unknown = np.zeros((unknown_raw.shape[0], np.unique(train_labels_4train).shape[0]))
-# pred_test = np.zeros((test_raw.shape[0], np.unique(train_labels_4train).shape[0]))
+pred_test = np.zeros((test_raw.shape[0], np.unique(train_labels_4train).shape[0]))
 pred_train = np.zeros((train_labels.shape[0], np.unique(train_labels_4train).shape[0]))
 source_train = np.array([file.split('_')[3] == 'source' for file in train_files.tolist()])
 source_eval = np.array([file.split('_')[3] == 'source' for file in eval_files.tolist()])
 source_unknown = np.array([file.split('_')[3] == 'source' for file in unknown_files.tolist()])
 
-for n_subclusters in 2**np.arange(6):
+for n_subclusters in 2**np.arange(10):
     # n_subclusters=32
     y_train_cat = keras.utils.np_utils.to_categorical(train_labels, num_classes=num_classes)
     y_eval_cat = keras.utils.np_utils.to_categorical(eval_labels, num_classes=num_classes)
     y_unknown_cat = keras.utils.np_utils.to_categorical(unknown_labels, num_classes=num_classes)
-    # y_test_cat = keras.utils.np_utils.to_categorical(test_labels, num_classes=num_classes)
+    y_test_cat = keras.utils.np_utils.to_categorical(test_labels, num_classes=num_classes)
 
     y_train_cat_4train = keras.utils.np_utils.to_categorical(train_labels_4train, num_classes=num_classes_4train)
     y_eval_cat_4train = keras.utils.np_utils.to_categorical(eval_labels_4train, num_classes=num_classes_4train)
@@ -653,7 +653,7 @@ for n_subclusters in 2**np.arange(6):
 
     # compile model
     data_input, label_input, loss_output = model_xvector_cnn(num_classes=num_classes_4train,
-                                                             raw_dim=eval_raw.shape[1], n_subclusters=n_subclusters)
+                                                             raw_dim=eval_raw.shape[1], n_subclusters=16)
     model = tf.keras.Model(inputs=[data_input, label_input], outputs=[loss_output])
     model.compile(loss=[mixupLoss], optimizer=tf.keras.optimizers.Adam())
     print(model.summary())
@@ -684,7 +684,7 @@ for n_subclusters in 2**np.arange(6):
         print('aeon: ' + str(k))
         # fit model
         weight_path = 'wts_raw_' + str(k + 1) + 'k_' + str(target_sr) + '_' + str(
-            n_subclusters) + '_with_eval_final.h5'  # '_emb_distr_raw.h5'
+            n_subclusters+777) + '_with_eval_final_new.h5'  # '_emb_distr_raw.h5'
         if not os.path.isfile(weight_path):
             class_weights = class_weight.compute_class_weight('balanced', np.unique(train_labels_4train),
                                                               train_labels_4train)
@@ -713,99 +713,22 @@ for n_subclusters in 2**np.arange(6):
 
         # x_vector_model = tf.keras.Model(model.input, model.get_layer('emb').output)
         x_vector_model = tf.keras.Model(model.input, model.layers[-3].output)  # -3
-        eval_x_vecs = x_vector_model.predict([eval_raw, y_eval_cat], batch_size=batch_size)#[:,128:]
-        train_x_vecs = x_vector_model.predict([train_raw, y_train_cat], batch_size=batch_size)#[:,128:]
-        unknown_x_vecs = x_vector_model.predict([unknown_raw, y_unknown_cat], batch_size=batch_size)#[:,128:]
-        # test_x_vecs = x_vector_model.predict([test_raw, y_test_cat], batch_size=batch_size)
+        eval_x_vecs = x_vector_model.predict([eval_raw, np.zeros((eval_raw.shape[0], num_classes_4train))], batch_size=batch_size)#[:,128:]
+        train_x_vecs = x_vector_model.predict([train_raw, np.zeros((train_raw.shape[0], num_classes_4train))], batch_size=batch_size)#[:,128:]
+        unknown_x_vecs = x_vector_model.predict([unknown_raw, np.zeros((unknown_raw.shape[0], num_classes_4train))], batch_size=batch_size)#[:,128:]
+        test_x_vecs = x_vector_model.predict([test_raw, np.zeros((test_raw.shape[0], num_classes_4train))], batch_size=batch_size)
 
         # length normalization
         print('normalizing lengths')
         x_train_ln = length_norm(train_x_vecs)
         x_eval_ln = length_norm(eval_x_vecs)
-        # x_test_ln = length_norm(test_x_vecs)
+        x_test_ln = length_norm(test_x_vecs)
         x_unknown_ln = length_norm(unknown_x_vecs)
 
         model_means = model.layers[-2].get_weights()[0].transpose()
         model_means_ln = length_norm(model_means)
-        """
-        dm = np.dot(model_means_ln, x_train_ln.transpose())
-        print(dm.shape)
-        #plt.imshow(dm, aspect='auto')
-        #plt.show()
-        #plt.plot(np.argmax(dm, axis=0), '.')
-        #plt.show()
-        plt.imshow(x_eval_ln[source_eval].transpose(), aspect='auto')
-        plt.show()
-        plt.imshow(np.dot(model_means_ln, np.concatenate([x_eval_ln[source_eval], x_unknown_ln[source_unknown]], axis=0).transpose()), aspect='auto')
-        #plt.plot(np.max(np.dot(model_means_ln, x_unknown_ln[source_unknown].transpose()), axis=0), '.')
-        plt.show()
-        """
-        # x_train_ln = np.mean(train_x_vecs[:,:,:,0], axis=1)
-        # x_eval_ln = np.mean(eval_x_vecs[:,:,:,0], axis=1)
-        # x_unknown_ln = np.mean(unknown_x_vecs[:,:,:,0], axis=1)
-        """
-        for j, lab in tqdm(enumerate(np.unique(train_labels)), total=len(np.unique(train_labels))):
-            if np.sum(eval_labels == lab) > 0:
-                print(le.inverse_transform([lab])[0])
-                # mix samples
-                train_mixed = np.zeros((np.sum((train_labels==lab)*~source_train)*np.sum((train_labels==lab)*source_train),train_raw.shape[1],1))
-                for j_target in np.arange(np.sum((train_labels==lab)*~source_train)):
-                    train_mixed[j_target*np.sum((train_labels==lab)*source_train):(j_target+1)*np.sum((train_labels==lab)*source_train)] = 0.5*train_raw[(train_labels==lab)*source_train]+0.5*np.expand_dims(train_raw[(train_labels==lab)*~source_train][j_target], axis=0)
-                # extract embeddings
-                train_mixed_embs = x_vector_model.predict([train_mixed, np.zeros((train_mixed.shape[0],y_train_cat.shape[1]))], batch_size=batch_size)
-                train_mixed_embs_ln = length_norm(train_mixed_embs)
-                # train GMM
-                clf1 = GaussianMixture(n_components=n_subclusters, covariance_type='full', reg_covar=1e-3).fit(train_mixed_embs_ln)
-                train_mixed = None
-                # compute scores
-                tmp_mixed = np.zeros(train_raw[train_labels==lab].shape)
-                pred_eval_tmp = np.zeros((np.sum(eval_labels==lab),1))
-                pred_unknown_tmp = np.zeros((np.sum(unknown_labels==lab),1))
-                for j_sample in tqdm(np.arange(np.sum(eval_labels==lab))):
-                    # mix with training samples
-                    tmp_mixed = train_raw[train_labels==lab]*0.5+0.5*np.expand_dims(eval_raw[eval_labels==lab][j_sample], axis=0)
-                    # get embeddings
-                    eval_mixed_embs = x_vector_model.predict([tmp_mixed, np.zeros((tmp_mixed.shape[0], y_train_cat.shape[1]))], batch_size=batch_size)
-                    eval_mixed_embs_ln = length_norm(eval_mixed_embs)
-                    # evaluate GMM
-                    scores_eval_mixed = -clf1.score_samples(eval_mixed_embs_ln)
-                    # take mean of scores
-                    pred_eval_tmp[j_sample] = np.mean(scores_eval_mixed)
-                for j_sample in tqdm(np.arange(np.sum(unknown_labels == lab))):
-                    # mix with training samples
-                    tmp_mixed = train_raw[train_labels==lab] * 0.5 + 0.5 * np.expand_dims(unknown_raw[unknown_labels == lab][j_sample], axis=0)
-                    # get embeddings
-                    unknown_mixed_embs = x_vector_model.predict(
-                        [tmp_mixed, np.zeros((tmp_mixed.shape[0], y_train_cat.shape[1]))], batch_size=batch_size)
-                    unknown_mixed_embs_ln = length_norm(unknown_mixed_embs)
-                    # evaluate GMM
-                    scores_unknown_mixed = -clf1.score_samples(unknown_mixed_embs_ln)
-                    # take mean of scores
-                    pred_unknown_tmp[j_sample] = np.mean(scores_unknown_mixed)
-                tmp_mixed = None
-
-                # plt.plot(pred_train[train_labels_4train == lab, j],'.')
-                plt.plot(pred_eval_tmp,'.')
-                plt.plot(pred_unknown_tmp,'.')
-                plt.show()
-                auc = roc_auc_score(
-                    np.concatenate([np.zeros(np.sum(eval_labels == lab)), np.ones(np.sum(unknown_labels == lab))], axis=0),
-                    np.concatenate([pred_eval_tmp, pred_unknown_tmp], axis=0))
-                print('AUC: ' + str(auc))
-                auc = roc_auc_score(
-                    np.concatenate([np.zeros(np.sum((eval_labels == lab)*source_eval)), np.ones(np.sum((unknown_labels == lab)*source_unknown))], axis=0),
-                    np.concatenate([pred_eval_tmp[source_eval[eval_labels==lab]], pred_unknown_tmp[source_unknown[unknown_labels==lab]]], axis=0))
-                print('AUC for source domain: ' + str(auc))
-                auc = roc_auc_score(
-                    np.concatenate([np.zeros(np.sum((eval_labels == lab)*~source_eval)), np.ones(np.sum((unknown_labels == lab)*~source_unknown))], axis=0),
-                    np.concatenate([pred_eval_tmp[~source_eval[eval_labels==lab]], pred_unknown_tmp[~source_unknown[unknown_labels==lab]]], axis=0))
-                print('AUC for target domain: ' + str(auc))
-                pred_eval[eval_labels == lab, :] = pred_eval_tmp
-                pred_unknown[unknown_labels == lab, :] = pred_unknown_tmp
-        """
-
         for n_subclusters_gmm in [15]:
-            n_subclusters_gmm = n_subclusters
+            n_subclusters_gmm = 16#n_subclusters
             for j, lab in tqdm(enumerate(np.unique(train_labels)), total=len(np.unique(train_labels))):
 
                 # plt.imshow(np.concatenate([x_train_ln[train_labels==lab],x_eval_ln[eval_labels==lab], x_unknown_ln[unknown_labels==lab]],axis=0).transpose(), aspect='auto')
@@ -833,10 +756,12 @@ for n_subclusters in 2**np.arange(6):
                         clf1 = GaussianMixture(n_components=n_subclusters_gmm, covariance_type='full',
                                                reg_covar=1e-3).fit(
                             np.concatenate([x_train_ln_cp, x_train_ln[train_labels == lab]], axis=0))
+                            #x_train_ln[train_labels == lab])
                     else:
                         clf1 = GaussianMixture(n_components=np.sum(train_labels == lab), covariance_type='full',
                                                reg_covar=1e-3).fit(
                             np.concatenate([x_train_ln_cp, x_train_ln[train_labels == lab]], axis=0))
+                            #x_train_ln[train_labels == lab])
                     # pred_train[train_labels == lab, :] += np.expand_dims(
                     #    -clf1.score_samples(x_train_ln_cp), axis=-1)
                     # pred_train[train_labels == lab, :] += np.expand_dims(
@@ -847,6 +772,10 @@ for n_subclusters in 2**np.arange(6):
                             -clf1.score_samples(x_eval_ln[eval_labels == lab]), axis=-1)
                         pred_unknown[unknown_labels == lab, :] += np.expand_dims(
                             -clf1.score_samples(x_unknown_ln[unknown_labels == lab]), axis=-1)
+
+                    if np.sum(test_labels == lab) > 0:
+                        pred_test[test_labels == lab, :] += np.expand_dims(
+                            -clf1.score_samples(x_test_ln[test_labels == lab]), axis=-1)
 
                     # pred_train += np.expand_dims(-clf1.score_samples(x_train_ln), axis=-1)
                     # if np.sum(eval_labels == lab) > 0:
@@ -867,45 +796,6 @@ for n_subclusters in 2**np.arange(6):
                         # plt.plot(pred_unknown[unknown_labels_4train == lab, j],'.')
                         # plt.show()
                         print('AUC with mean: ' + str(auc))
-        for n_subclusters_gmm in [15]:
-            """
-            n_subclusters_gmm = n_subclusters
-            for j, lab in tqdm(enumerate(np.unique(train_labels_4train)), total=len(np.unique(train_labels_4train))):
-
-                # plt.imshow(np.concatenate([x_train_ln[train_labels==lab],x_eval_ln[eval_labels==lab], x_unknown_ln[unknown_labels==lab]],axis=0).transpose(), aspect='auto')
-                # plt.show()
-                # clf1 = GaussianMixture(n_components=n_subclusters_gmm, covariance_type='full', reg_covar=1e-3, means_init=model_means_ln[j * n_subclusters:(j + 1) * n_subclusters]).fit(x_train_ln[train_labels==lab])#.fit(x_train_ln[train_labels==lab][source_train[train_labels==lab]])
-                if np.sum(train_labels_4train == lab) > 1:
-                    if np.sum(train_labels_4train == lab) >= n_subclusters_gmm:
-                        clf1 = GaussianMixture(n_components=n_subclusters_gmm, covariance_type='full',
-                                               reg_covar=1e-3).fit(
-                            x_train_ln[train_labels_4train == lab])
-                    else:
-                        clf1 = GaussianMixture(n_components=np.sum(train_labels_4train == lab), covariance_type='full',
-                                               reg_covar=1e-3).fit(x_train_ln[train_labels_4train == lab])
-                    lab_sec = le.transform([le_4train.inverse_transform([lab])[0].split('_')[0] + '_' +
-                                            le_4train.inverse_transform([lab])[0].split('_')[1]])[0]
-                    pred_train[train_labels == lab_sec, j] += -clf1.score_samples(x_train_ln[train_labels == lab_sec])
-                    if np.sum(eval_labels == lab_sec) > 0:
-                        pred_eval[eval_labels == lab_sec, j] += -clf1.score_samples(x_eval_ln[eval_labels == lab_sec])
-                        pred_unknown[unknown_labels == lab_sec, j] += -clf1.score_samples(
-                            x_unknown_ln[unknown_labels == lab_sec])
-                    # pred_train[:, j] += -clf1.score_samples(x_train_ln)
-                    # pred_eval[:, j] += -clf1.score_samples(x_eval_ln)
-                    # pred_unknown[:, j] += -clf1.score_samples(x_unknown_ln)
-                    # pred_test[:, j] += -clf1.score_samples(x_test_ln)
-                    if np.sum(eval_labels_4train == lab) > 0:
-                        auc = roc_auc_score(np.concatenate([np.zeros(np.sum(eval_labels_4train == lab)),
-                                                            np.ones(np.sum(unknown_labels_4train == lab))], axis=0),
-                                            np.concatenate([pred_eval[eval_labels_4train == lab, j],
-                                                            pred_unknown[unknown_labels_4train == lab, j]], axis=0))
-
-                        # plt.plot(pred_train[train_labels_4train == lab, j],'.')
-                        # plt.plot(pred_eval[eval_labels_4train == lab, j],'.')
-                        # plt.plot(pred_unknown[unknown_labels_4train == lab, j],'.')
-                        # plt.show()
-                        print('AUC with mean: ' + str(auc))
-            """
             j = 0
             pred_eval_plda = pred_eval  # np.log(1-np.exp(pred_eval))
             pred_unknown_plda = pred_unknown  # np.log(1-np.exp(pred_unknown))
@@ -913,43 +803,8 @@ for n_subclusters in 2**np.arange(6):
             # plt.plot(pred_unknown_plda, '.')
             # plt.show()
 
-            # pred_test_plda = pred_test
+            pred_test_plda = pred_test
 
-            # apply logistic regression to combine and calibrate scores
-            # lr = LogisticRegression(class_weight='balanced', max_iter=10000, solver='saga', n_jobs=-1).fit(pred_train, train_labels)
-            # pred_eval_plda = -lr.predict_proba(pred_eval_plda)
-            # pred_unknown_plda = -lr.predict_proba(pred_unknown_plda)
-            """
-            # output performance
-            print('performance on evaluation set')
-            y_pred_eval = np.argmin(pred_eval_plda, axis=1)
-            y_pred_unknown = np.argmin(pred_unknown_plda, axis=1)
-            print('####################')
-            print('closed-set performance by machine id:')
-            print('evaluation files: ' + str(np.mean(y_pred_eval == eval_labels)))
-            print('unknown files: ' + str(np.mean(y_pred_unknown == unknown_labels)))
-            print('all files: ' + str(
-                np.mean(np.hstack([y_pred_unknown, y_pred_eval]) == np.hstack([unknown_labels, eval_labels]))))
-            print('####################')
-            type_labels_eval1 = np.array([eval_id.split('_')[0] for eval_id in eval_ids])
-            type_labels_unknown1 = np.array([unknown_id.split('_')[0] for unknown_id in unknown_ids])
-            type_pred_eval1 = np.array([pred_id.split('_')[0] for pred_id in le.inverse_transform(y_pred_eval)])
-            type_pred_unknown1 = np.array([pred_id.split('_')[0] for pred_id in le.inverse_transform(y_pred_unknown)])
-            print('closed-set performance by machine type:')
-            print('evaluation files: ' + str(np.mean(type_pred_eval1 == type_labels_eval1)))
-            print('unknown files: ' + str(np.mean(type_pred_unknown1 == type_labels_unknown1)))
-            print('all files: ' + str(np.mean(
-                np.hstack([type_pred_unknown1, type_pred_eval1]) == np.hstack([type_labels_unknown1, type_labels_eval1]))))
-            print('####################')
-
-            print('closed-set performance on test data')
-            y_pred_test = np.argmin(pred_test_plda, axis=1)
-            type_labels_test1 = np.array([test_id.split('_')[0] for test_id in test_ids])
-            type_pred_test1 = np.array([pred_id.split('_')[0] for pred_id in le.inverse_transform(y_pred_test)])
-            print('for machine id: ' + str(np.mean(y_pred_test == test_labels)))
-            print('for machine type: ' + str(np.mean(type_pred_test1 == type_labels_test1)))
-            print('####################')
-            """
             aucs = []
             p_aucs = []
             for j, cat in enumerate(np.unique(eval_ids)):
@@ -1001,14 +856,28 @@ np.save('pred_unknown_att.npy', pred_unknown_plda)
 
 # create challenge submission files
 print('creating submission files')
+sub_path = './submission'
+if not os.path.exists('./submission'):
+    os.makedirs(sub_path)
 for j, cat in enumerate(np.unique(test_ids)):
+    # anomaly scores
     file_idx = test_labels == le.transform([cat])
-    results = pd.DataFrame()
-    # results['output'] = [f.split('/')[-1] + ',' + str(s) for f, s in zip(test_files[file_idx], pred_test_plda[file_idx, le.transform([cat])])]
-    results['output1'], results['output2'] = [[f.split('/')[-1] for f in test_files[file_idx]],
-                                              [str(s) for s in pred_test_plda[file_idx, le.transform([cat])]]]
-    results.to_csv('teams/mfcc_emb/anomaly_score_' + cat.split('_')[0] + '_id_' + cat.split('_')[-1] + '.csv',
-                   encoding='utf-8', index=False, header=False)
+    results_an = pd.DataFrame()
+    results_an['output1'], results_an['output2'] = [[f.split('/')[-1] for f in test_files[file_idx]],
+                                                    [str(s) for s in pred_test_plda[file_idx, le.transform([cat])]]]
+    results_an.to_csv(sub_path + '/anomaly_score_' + cat.split('_')[0] + '_section_' + cat.split('_')[-1] + '.csv',
+                      encoding='utf-8', index=False, header=False)
+
+    # decision results
+    train_scores = np.mean(np.sum(pred_train, axis=-1), axis=-1)[
+        (train_sections == sec) * (train_domains == dom), le.transform([sec])]
+    threshold = np.percentile(train_scores, q=90)
+    decisions = np.mean(np.sum(pred_test, axis=-1), axis=-1)[file_idx, le.transform([sec])] > threshold
+    results_dec = pd.DataFrame()
+    results_dec['output1'], results_dec['output2'] = [[f.split('/')[-1] for f in test_files[file_idx]],
+                                                      [str(int(s)) for s in decisions]]
+    results_dec.to_csv(sub_path + '/decision_result_' + cat.split('_')[0] + '_section_' + cat.split('_')[-1] + '.csv',
+                       encoding='utf-8', index=False, header=False)
 print('####################')
 print('>>>> finished! <<<<<')
 print('####################')
