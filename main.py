@@ -414,7 +414,7 @@ source_train = np.array([file.split('_')[3] == 'source' for file in train_files.
 source_eval = np.array([file.split('_')[3] == 'source' for file in eval_files.tolist()])
 source_unknown = np.array([file.split('_')[3] == 'source' for file in unknown_files.tolist()])
 
-for k_ensemble in 2**np.arange(10):
+for k_ensemble in np.arange(10):
     y_train_cat = keras.utils.np_utils.to_categorical(train_labels, num_classes=num_classes)
     y_eval_cat = keras.utils.np_utils.to_categorical(eval_labels, num_classes=num_classes)
     y_unknown_cat = keras.utils.np_utils.to_categorical(unknown_labels, num_classes=num_classes)
@@ -426,7 +426,7 @@ for k_ensemble in 2**np.arange(10):
 
     # compile model
     data_input, label_input, loss_output = model_xvector_cnn(num_classes=num_classes_4train,
-                                                             raw_dim=eval_raw.shape[1], n_subclusters=16)
+                                                             raw_dim=eval_raw.shape[1], n_subclusters=n_subclusters)
     model = tf.keras.Model(inputs=[data_input, label_input], outputs=[loss_output])
     model.compile(loss=[mixupLoss], optimizer=tf.keras.optimizers.Adam())
     #print(model.summary())
