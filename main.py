@@ -103,16 +103,6 @@ def mixupLoss(y_true, y_pred):
     return tf.keras.losses.categorical_crossentropy(y_true=y_pred[:, :, 1], y_pred=y_pred[:, :, 0])
 
 
-def make_mean(mat, label):
-    label, index = np.unique(label, return_inverse=True)
-    mean = []
-    mat = np.array(mat)
-    for i, spk in enumerate(label):
-        mean.append(np.mean(mat[np.nonzero(index == i)], axis=0))
-    mean = length_norm(mean)
-    return mean, label
-
-
 def length_norm(mat):
     norm_mat = []
     for line in mat:
@@ -431,10 +421,10 @@ for k_ensemble in np.arange(10):
     model.compile(loss=[mixupLoss], optimizer=tf.keras.optimizers.Adam())
     #print(model.summary())
     for k in np.arange(aeons):
-        print('ensemble iteration: ' + str(k_ensemble))
-        print('aeon: ' + str(k))
+        print('ensemble iteration: ' + str(k_ensemble+1))
+        print('aeon: ' + str(k+1))
         # fit model
-        weight_path = 'wts_' + str(k + 1) + 'k_' + str(target_sr) + '_' + str(k_ensemble) + '.h5'
+        weight_path = 'wts_' + str(k+1) + 'k_' + str(target_sr) + '_' + str(k_ensemble+1) + '.h5'
         if not os.path.isfile(weight_path):
             model.fit(
                 [train_raw, y_train_cat_4train], y_train_cat_4train, verbose=1,
