@@ -535,7 +535,7 @@ for j, cat in enumerate(np.unique(test_ids)):
     results_an = pd.DataFrame()
     results_an['output1'], results_an['output2'] = [[f.split('/')[-1] for f in test_files[file_idx]],
                                                     [str(s) for s in pred_test[file_idx, le.transform([cat])]]]
-    results_an.to_csv(sub_path + '/anomaly_score_' + cat.split('_')[0] + '_section_' + cat.split('_')[-1] + '.csv',
+    results_an.to_csv(sub_path + '/anomaly_score_' + cat.split('_')[0] + '_section_' + cat.split('_')[-1] + '_test.csv',
                       encoding='utf-8', index=False, header=False)
 
     # decision results
@@ -545,7 +545,7 @@ for j, cat in enumerate(np.unique(test_ids)):
     results_dec = pd.DataFrame()
     results_dec['output1'], results_dec['output2'] = [[f.split('/')[-1] for f in test_files[file_idx]],
                                                       [str(int(s)) for s in decisions]]
-    results_dec.to_csv(sub_path + '/decision_result_' + cat.split('_')[0] + '_section_' + cat.split('_')[-1] + '.csv',
+    results_dec.to_csv(sub_path + '/decision_result_' + cat.split('_')[0] + '_section_' + cat.split('_')[-1] + '_test.csv',
                        encoding='utf-8', index=False, header=False)
 print('####################')
 print('>>>> finished! <<<<<')
