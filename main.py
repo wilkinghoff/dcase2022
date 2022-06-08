@@ -527,7 +527,7 @@ for k_ensemble in np.arange(10):
 # create challenge submission files
 print('creating submission files')
 sub_path = './submission'
-if not os.path.exists('./submission'):
+if not os.path.exists(sub_path):
     os.makedirs(sub_path)
 for j, cat in enumerate(np.unique(test_ids)):
     # anomaly scores
