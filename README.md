@@ -5,7 +5,7 @@ The implementation is based on Tensorflow 2.x. Just start the main script for tr
 
 When finding this code helpful, or reusing parts of it, a citation would be appreciated:
 @techreport{wilkinghoff2022outlier,
-  title={Outlier exposed anomalous sound detection for domain generalization in machine condition monitoring},
+  title={An outlier exposed anomalous sound detection system for domain generalization in machine condition monitoring},
   author={Wilkinghoff, Kevin},
   year={2022},
   institution={DCASE2022 Challenge, Tech. Rep}
