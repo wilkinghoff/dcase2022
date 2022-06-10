@@ -152,7 +152,7 @@ def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
     # LOG-MEL
     x = tf.keras.layers.Reshape((160000,))(x_mix)
     x = LogMelSpectrogram(16000, 1024, 256, 128, f_max=8000)(x)
-    x = tf.keras.layers.BatchNormalization(axis=-2)(x) # CMVN-like normalization
+    x = tf.keras.layers.Lambda(lambda x: (x - tf.math.reduce_mean(x, axis=1, keepdims=True))/tf.math.reduce_std(x, axis=1, keepdims=True))(x) # CMVN-like normalization
 
     # first block
     x = tf.keras.layers.Conv2D(16, 7, strides=2, activation='linear', padding='same',
