@@ -428,7 +428,7 @@ for k_ensemble in np.arange(10):
         if not os.path.isfile(weight_path):
             model.fit(
                 [train_raw, y_train_cat_4train], y_train_cat_4train, verbose=1,
-                batch_size=batch_size, epochs=epochs, callbacks=callbacks,
+                batch_size=batch_size, epochs=epochs,
                 validation_data=([eval_raw, y_eval_cat_4train], y_eval_cat_4train))
             model.save(weight_path)
         else:
