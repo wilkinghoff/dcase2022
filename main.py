@@ -384,9 +384,7 @@ eval_files = eval_files[eval_normal]
 eval_ids = eval_ids[eval_normal]
 eval_domains = eval_domains[eval_normal]
 
-########################################################################################################################
-# train x-vector cnn on train partition of development set
-########################################################################################################################
+# training parameters
 batch_size = 64
 batch_size_test = 64
 epochs = 100
@@ -395,7 +393,7 @@ alpha = 1
 n_subclusters = 16
 ensemble_size = 10
 
-# predicting with GMMs
+# prepare scores and domain info
 pred_eval = np.zeros((eval_raw.shape[0], np.unique(train_labels).shape[0]))
 pred_unknown = np.zeros((unknown_raw.shape[0], np.unique(train_labels).shape[0]))
 pred_test = np.zeros((test_raw.shape[0], np.unique(train_labels).shape[0]))
