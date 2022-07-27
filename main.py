@@ -436,17 +436,17 @@ for k_ensemble in np.arange(10):
                                                                'LogMelSpectrogram': LogMelSpectrogram})
 
         # extract embeddings
-        x_vector_model = tf.keras.Model(model.input, model.layers[-3].output)
-        eval_x_vecs = x_vector_model.predict([eval_raw, np.zeros((eval_raw.shape[0], num_classes_4train))], batch_size=batch_size)
-        train_x_vecs = x_vector_model.predict([train_raw, np.zeros((train_raw.shape[0], num_classes_4train))], batch_size=batch_size)
-        unknown_x_vecs = x_vector_model.predict([unknown_raw, np.zeros((unknown_raw.shape[0], num_classes_4train))], batch_size=batch_size)
-        test_x_vecs = x_vector_model.predict([test_raw, np.zeros((test_raw.shape[0], num_classes_4train))], batch_size=batch_size)
+        emb_model = tf.keras.Model(model.input, model.layers[-3].output)
+        eval_embs = emb_model.predict([eval_raw, np.zeros((eval_raw.shape[0], num_classes_4train))], batch_size=batch_size)
+        train_embs = emb_model.predict([train_raw, np.zeros((train_raw.shape[0], num_classes_4train))], batch_size=batch_size)
+        unknown_embs = emb_model.predict([unknown_raw, np.zeros((unknown_raw.shape[0], num_classes_4train))], batch_size=batch_size)
+        test_embs = emb_model.predict([test_raw, np.zeros((test_raw.shape[0], num_classes_4train))], batch_size=batch_size)
 
         # length normalization
-        x_train_ln = length_norm(train_x_vecs)
-        x_eval_ln = length_norm(eval_x_vecs)
-        x_test_ln = length_norm(test_x_vecs)
-        x_unknown_ln = length_norm(unknown_x_vecs)
+        x_train_ln = length_norm(train_embs)
+        x_eval_ln = length_norm(eval_embs)
+        x_test_ln = length_norm(test_embs)
+        x_unknown_ln = length_norm(unknown_embs)
 
         # compute ASD scores
         n_subclusters_gmm = n_subclusters
