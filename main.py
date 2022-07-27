@@ -112,7 +112,7 @@ def length_norm(mat):
     return norm_mat
 
 
-def model_xvector_cnn(num_classes, raw_dim, n_subclusters):
+def model_emb_cnn(num_classes, raw_dim, n_subclusters):
     data_input = tf.keras.layers.Input(shape=(raw_dim, 1), dtype='float32')
     label_input = tf.keras.layers.Input(shape=(num_classes), dtype='float32')
     y = label_input
@@ -413,7 +413,7 @@ for k_ensemble in np.arange(10):
     y_unknown_cat_4train = keras.utils.np_utils.to_categorical(unknown_labels_4train, num_classes=num_classes_4train)
 
     # compile model
-    data_input, label_input, loss_output = model_xvector_cnn(num_classes=num_classes_4train,
+    data_input, label_input, loss_output = model_emb_cnn(num_classes=num_classes_4train,
                                                              raw_dim=eval_raw.shape[1], n_subclusters=n_subclusters)
     model = tf.keras.Model(inputs=[data_input, label_input], outputs=[loss_output])
     model.compile(loss=[mixupLoss], optimizer=tf.keras.optimizers.Adam())
