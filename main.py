@@ -478,6 +478,9 @@ for k_ensemble in np.arange(10):
                     pred_test[test_labels == lab, j] += -clf1.score_samples(x_test_ln[test_labels == lab])
 
         # print results for development set
+        print('#######################################################################################################')
+        print('DEVELOPMENT SET')
+        print('#######################################################################################################')
         aucs = []
         p_aucs = []
         for j, cat in enumerate(np.unique(eval_ids)):
@@ -521,6 +524,56 @@ for k_ensemble in np.arange(10):
         print('mean AUC: ' + str(mean_auc * 100))
         mean_p_auc = hmean(p_aucs)
         print('mean pAUC: ' + str(mean_p_auc * 100))
+
+        """
+        # print results for eval set
+        print('#######################################################################################################')
+        print('EVALUATION SET')
+        print('#######################################################################################################')
+        aucs = []
+        p_aucs = []
+        for j, cat in enumerate(np.unique(test_ids)):
+            y_pred = pred_test[test_labels == le.transform([cat]), le.transform([cat])]
+            y_true = np.array(pd.read_csv(
+                './dcase2022_evaluator-main/ground_truth_data/ground_truth_' + cat.split('_')[0] + '_section_' + cat.split('_')[1] + '_test.csv', header=None).iloc[:, 1] == 1)
+            auc = roc_auc_score(y_true, y_pred)
+            aucs.append(auc)
+            p_auc = roc_auc_score(y_true, y_pred, max_fpr=0.1)
+            p_aucs.append(p_auc)
+            print('AUC for category ' + str(cat) + ': ' + str(auc * 100))
+            print('pAUC for category ' + str(cat) + ': ' + str(p_auc * 100))
+
+            source_all = np.concatenate([source_eval[eval_labels == le.transform([cat])],
+                                         source_unknown[unknown_labels == le.transform([cat])]], axis=0)
+            source_all = np.array(pd.read_csv(
+                './dcase2022_evaluator-main/ground_truth_domain/ground_truth_' + cat.split('_')[0] + '_section_' + cat.split('_')[1] + '_test.csv', header=None).iloc[:, 1] == 0)
+            auc = roc_auc_score(y_true[source_all], y_pred[source_all])
+            p_auc = roc_auc_score(y_true[source_all], y_pred[source_all], max_fpr=0.1)
+            print('AUC for source domain of category ' + str(cat) + ': ' + str(auc * 100))
+            print('pAUC for source domain of category ' + str(cat) + ': ' + str(p_auc * 100))
+            auc = roc_auc_score(y_true[~source_all], y_pred[~source_all])
+            p_auc = roc_auc_score(y_true[~source_all], y_pred[~source_all], max_fpr=0.1)
+            print('AUC for target domain of category ' + str(cat) + ': ' + str(auc * 100))
+            print('pAUC for target domain of category ' + str(cat) + ': ' + str(p_auc * 100))
+        print('####################')
+        aucs = np.array(aucs)
+        p_aucs = np.array(p_aucs)
+        for cat in categories:
+            mean_auc = hmean(aucs[np.array([eval_id.split('_')[0] for eval_id in np.unique(eval_ids)]) == cat])
+            print('mean AUC for category ' + str(cat) + ': ' + str(mean_auc * 100))
+            mean_p_auc = hmean(p_aucs[np.array([eval_id.split('_')[0] for eval_id in np.unique(eval_ids)]) == cat])
+            print('mean pAUC for category ' + str(cat) + ': ' + str(mean_p_auc * 100))
+        print('####################')
+        for cat in categories:
+            mean_auc = hmean(aucs[np.array([eval_id.split('_')[0] for eval_id in np.unique(eval_ids)]) == cat])
+            mean_p_auc = hmean(p_aucs[np.array([eval_id.split('_')[0] for eval_id in np.unique(eval_ids)]) == cat])
+            print('mean of AUC and pAUC for category ' + str(cat) + ': ' + str((mean_p_auc + mean_auc) * 50))
+        print('####################')
+        mean_auc = hmean(aucs)
+        print('mean AUC: ' + str(mean_auc * 100))
+        mean_p_auc = hmean(p_aucs)
+        print('mean pAUC: ' + str(mean_p_auc * 100))
+        """
 
 # create challenge submission files
 print('creating submission files')
